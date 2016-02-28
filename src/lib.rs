@@ -10,11 +10,13 @@ use rand::{ thread_rng, Rng };
 
 pub const HASH_LEN: usize = 256 / 8;
 
+#[derive(Clone, Hash, PartialEq, Debug)]
 pub struct PrivateKey {
     // [(hash, hash)...; 32]
     key: Vec<(Vec<u8>, Vec<u8>)>
 }
 
+#[derive(Clone, Hash, PartialEq, Debug)]
 pub struct PublicKey {
     key: Vec<(Vec<u8>, Vec<u8>)>
 }
@@ -40,6 +42,13 @@ impl PrivateKey {
                 ))
                 .collect()
         }
+    }
+
+    pub fn output(&self) -> Vec<u8> {
+        self.key.iter()
+            .map(|&(ref x, ref y)| [x.to_vec(), y.to_vec()].concat())
+            .collect::<Vec<Vec<u8>>>()
+            .concat()
     }
 
     /// s1. Take the SHA-256 hash of the document you want to sign
@@ -84,5 +93,37 @@ impl PublicKey {
                 hash!(x (HASH_LEN * 8) - (v as usize), x) != *x_p
                     || hash!(x v as usize, y) != *y_p
             })
+    }
+
+    pub fn output(&self) -> Vec<u8> {
+        self.key.iter()
+            .map(|&(ref x, ref y)| [x.to_vec(), y.to_vec()].concat())
+            .collect::<Vec<Vec<u8>>>()
+            .concat()
+    }
+}
+
+
+impl<V> From<V> for PrivateKey where V: Into<Vec<u8>> {
+    fn from(v: V) -> PrivateKey {
+        let v = v.into();
+        PrivateKey {
+            key: v.chunks(HASH_LEN * 2)
+                .map(|s| s.split_at(HASH_LEN))
+                .map(|(x, y)| (x.into(), y.into()))
+                .collect()
+        }
+    }
+}
+
+impl<V> From<V> for PublicKey where V: Into<Vec<u8>> {
+    fn from(v: V) -> PublicKey {
+        let v = v.into();
+        PublicKey {
+            key: v.chunks(HASH_LEN * 2)
+                .map(|s| s.split_at(HASH_LEN))
+                .map(|(x, y)| (x.into(), y.into()))
+                .collect()
+        }
     }
 }
