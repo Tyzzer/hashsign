@@ -1,12 +1,12 @@
 extern crate hashsign;
 
-use hashsign::{ PrivateKey, PublicKey };
+use hashsign::Key;
 
 #[test]
 fn test_sign() {
     let data = b"Hello world!";
 
-    let sk = PrivateKey::new();
+    let sk = Key::new();
     let pk = sk.public();
     let s = sk.sign(data);
 
@@ -20,11 +20,11 @@ fn test_sign() {
 
 #[test]
 fn test_output() {
-    let sk = PrivateKey::new();
+    let sk = Key::new();
     let sk_data = sk.output();
-    assert_eq!(sk, PrivateKey::from(sk_data));
+    assert_eq!(sk, Key::from(sk_data));
 
     let pk = sk.public();
     let pk_data = pk.output();
-    assert_eq!(pk, PublicKey::from(pk_data));
+    assert_eq!(pk, Key::from(pk_data));
 }

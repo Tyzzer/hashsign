@@ -11,21 +11,16 @@ use rand::{ thread_rng, Rng };
 pub const HASH_LEN: usize = 256 / 8;
 
 #[derive(Clone, Hash, PartialEq, Debug)]
-pub struct PrivateKey {
+pub struct Key {
     // [(hash, hash)...; 32]
     key: Vec<(Vec<u8>, Vec<u8>)>
 }
 
-#[derive(Clone, Hash, PartialEq, Debug)]
-pub struct PublicKey {
-    key: Vec<(Vec<u8>, Vec<u8>)>
-}
-
-impl PrivateKey {
+impl Key {
     /// s3. For each chunk, generate a pair of secret random 256-bit numbers.
     /// These 64 numbers are your private key.
-    pub fn new() -> PrivateKey {
-        PrivateKey {
+    pub fn new() -> Key {
+        Key {
             key: (0..HASH_LEN).map(|_| (rand!(), rand!())).collect()
         }
     }
@@ -33,8 +28,8 @@ impl PrivateKey {
     /// s4. Hash each of these numbers 258 times.
     /// This final set of 32 pairs of 2 hashes each are your public key.
     /// (Note: Use a hash chain and this public key becomes just 256 bits)
-    pub fn public(&self) -> PublicKey {
-        PublicKey {
+    pub fn public(&self) -> Key {
+        Key {
             key: self.key.iter()
                 .map(|&(ref x, ref y)| (
                     hash!(x HASH_LEN * 8, x),
@@ -42,13 +37,6 @@ impl PrivateKey {
                 ))
                 .collect()
         }
-    }
-
-    pub fn output(&self) -> Vec<u8> {
-        self.key.iter()
-            .map(|&(ref x, ref y)| [x.to_vec(), y.to_vec()].concat())
-            .collect::<Vec<Vec<u8>>>()
-            .concat()
     }
 
     /// s1. Take the SHA-256 hash of the document you want to sign
@@ -73,9 +61,7 @@ impl PrivateKey {
             .collect::<Vec<Vec<u8>>>()
             .concat()
     }
-}
 
-impl PublicKey {
     /// v1. Take the SHA-256 hash of the document you want to verify
     /// v2. Split the 256-bit hash of the document into 32 8-bit chunks
     /// v3. For each chunk, let the chunk's value from the hash be V, the signature pair of numbers be (a, b) and the corresponding public key pair be (Pa, Pb)
@@ -104,22 +90,10 @@ impl PublicKey {
 }
 
 
-impl<V> From<V> for PrivateKey where V: Into<Vec<u8>> {
-    fn from(v: V) -> PrivateKey {
+impl<V> From<V> for Key where V: Into<Vec<u8>> {
+    fn from(v: V) -> Key {
         let v = v.into();
-        PrivateKey {
-            key: v.chunks(HASH_LEN * 2)
-                .map(|s| s.split_at(HASH_LEN))
-                .map(|(x, y)| (x.into(), y.into()))
-                .collect()
-        }
-    }
-}
-
-impl<V> From<V> for PublicKey where V: Into<Vec<u8>> {
-    fn from(v: V) -> PublicKey {
-        let v = v.into();
-        PublicKey {
+        Key {
             key: v.chunks(HASH_LEN * 2)
                 .map(|s| s.split_at(HASH_LEN))
                 .map(|(x, y)| (x.into(), y.into()))
