@@ -71,13 +71,13 @@ impl Key {
     /// v7. If there are more chunks, check the next chunk starting with step (3)
     /// v8. The signature is valid if all chunks are signed correctly.
     pub fn verify(&self, sign: &[u8], data: &[u8]) -> bool {
-        !sign.chunks(HASH_LEN * 2)
+        sign.chunks(HASH_LEN * 2)
             .map(|s| s.split_at(HASH_LEN))
             .zip(self.key.iter())
             .zip(hash!(data))
-            .any(|(((x, y), &(ref x_p, ref y_p)), v)| {
-                hash!(x (HASH_LEN * 8) - (v as usize), x) != *x_p
-                    || hash!(x v as usize, y) != *y_p
+            .all(|(((x, y), &(ref x_p, ref y_p)), v)| {
+                hash!(x (HASH_LEN * 8) - (v as usize), x) == *x_p
+                    && hash!(x v as usize, y) == *y_p
             })
     }
 
