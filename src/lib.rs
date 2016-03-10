@@ -55,8 +55,8 @@ impl Key {
         hash!(data).iter()
             .zip(self.key.clone())
             .map(|(&n, (x, y))| [
-                hash!(x n as usize, x),
-                hash!(x (HASH_LEN * 8) - (n as usize), y)
+                hash!(x n as usize + 1, x),
+                hash!(x (HASH_LEN * 8) - (n as usize + 1), y)
             ].concat())
             .collect::<Vec<Vec<u8>>>()
             .concat()
@@ -76,8 +76,8 @@ impl Key {
             .zip(self.key.iter())
             .zip(hash!(data))
             .all(|(((x, y), &(ref x_p, ref y_p)), v)| {
-                hash!(x (HASH_LEN * 8) - (v as usize), x) == *x_p
-                    && hash!(x v as usize, y) == *y_p
+                hash!(x (HASH_LEN * 8) - (v as usize + 1), x) == *x_p
+                    && hash!(x v as usize + 1, y) == *y_p
             })
     }
 
