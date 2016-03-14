@@ -10,33 +10,31 @@ use rand::{ thread_rng, Rng };
 
 pub const HASH_LEN: usize = 256 / 8;
 
+
 #[derive(Clone, Hash, PartialEq, Debug)]
-pub struct Key {
-    // [(hash, hash)...; 32]
-    key: Vec<(Vec<u8>, Vec<u8>)>
+pub struct Key(Vec<(Vec<u8>, Vec<u8>)>);
+
+impl Default for Key {
+    /// s3. For each chunk, generate a pair of secret random 256-bit numbers.
+    /// These 64 numbers are your private key.
+    fn default() -> Key {
+        Key((0..HASH_LEN).map(|_| (rand!(), rand!())).collect())
+    }
 }
 
 impl Key {
-    /// s3. For each chunk, generate a pair of secret random 256-bit numbers.
-    /// These 64 numbers are your private key.
-    pub fn new() -> Key {
-        Key {
-            key: (0..HASH_LEN).map(|_| (rand!(), rand!())).collect()
-        }
-    }
-
     /// s4. Hash each of these numbers 258 times.
     /// This final set of 32 pairs of 2 hashes each are your public key.
     /// (Note: Use a hash chain and this public key becomes just 256 bits)
     pub fn public(&self) -> Key {
-        Key {
-            key: self.key.iter()
+        Key(
+            self.0.iter()
                 .map(|&(ref x, ref y)| (
                     hash!(x HASH_LEN * 8, x),
                     hash!(x HASH_LEN * 8, y)
                 ))
                 .collect()
-        }
+        )
     }
 
     /// s1. Take the SHA-256 hash of the document you want to sign
@@ -53,7 +51,7 @@ impl Key {
     /// This is 4x smaller than the usual Lamport signature.
     pub fn sign(&self, data: &[u8]) -> Vec<u8> {
         hash!(data).iter()
-            .zip(self.key.clone())
+            .zip(self.0.clone())
             .map(|(&n, (x, y))| [
                 hash!(x n as usize + 1, x),
                 hash!(x (HASH_LEN * 8) - (n as usize + 1), y)
@@ -73,7 +71,7 @@ impl Key {
     pub fn verify(&self, sign: &[u8], data: &[u8]) -> bool {
         sign.chunks(HASH_LEN * 2)
             .map(|s| s.split_at(HASH_LEN))
-            .zip(self.key.iter())
+            .zip(self.0.iter())
             .zip(hash!(data))
             .all(|(((x, y), &(ref x_p, ref y_p)), v)| {
                 hash!(x (HASH_LEN * 8) - (v as usize + 1), x) == *x_p
@@ -82,7 +80,7 @@ impl Key {
     }
 
     pub fn output(&self) -> Vec<u8> {
-        self.key.iter()
+        self.0.iter()
             .map(|&(ref x, ref y)| [x.to_vec(), y.to_vec()].concat())
             .collect::<Vec<Vec<u8>>>()
             .concat()
@@ -93,11 +91,11 @@ impl Key {
 impl<V> From<V> for Key where V: Into<Vec<u8>> {
     fn from(v: V) -> Key {
         let v = v.into();
-        Key {
-            key: v.chunks(HASH_LEN * 2)
+        Key (
+            v.chunks(HASH_LEN * 2)
                 .map(|s| s.split_at(HASH_LEN))
                 .map(|(x, y)| (x.into(), y.into()))
                 .collect()
-        }
+        )
     }
 }

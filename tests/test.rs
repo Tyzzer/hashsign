@@ -6,7 +6,7 @@ use hashsign::Key;
 fn test_sign() {
     let data = b"Hello world!";
 
-    let sk = Key::new();
+    let sk = Key::default();
     let pk = sk.public();
     let s = sk.sign(data);
 
@@ -20,7 +20,7 @@ fn test_sign() {
 
 #[test]
 fn test_output() {
-    let sk = Key::new();
+    let sk = Key::default();
     let sk_data = sk.output();
     assert_eq!(sk, Key::from(sk_data));
 
