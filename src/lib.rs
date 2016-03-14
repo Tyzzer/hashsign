@@ -5,7 +5,6 @@ extern crate rand;
 
 use crypto::digest::Digest;
 use crypto::sha2::Sha256 as Hash;
-use rand::{ thread_rng, Rng };
 
 
 pub const HASH_LEN: usize = 256 / 8;

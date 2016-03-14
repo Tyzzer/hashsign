@@ -12,9 +12,11 @@ macro_rules! hash {
 }
 
 macro_rules! rand {
-    ( $len:expr ) => {
-        thread_rng().gen_iter().take($len).collect::<Vec<u8>>()
-    };
+    ( $len:expr ) => {{
+        use $crate::rand::Rng;
+        $crate::rand::os::OsRng::new().unwrap()
+            .gen_iter().take($len).collect::<Vec<u8>>()
+    }};
     () => { rand!(HASH_LEN) }
 }
 
