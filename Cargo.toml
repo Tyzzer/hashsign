@@ -5,4 +5,4 @@ authors = ["quininer kel <quininer@live.com>"]
 
 [dependencies]
 rust-crypto = "^0.2"
-rand = "*"
+rand = "0.3"
