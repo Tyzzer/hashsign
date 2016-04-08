@@ -5,6 +5,7 @@ extern crate rand;
 
 use crypto::digest::Digest;
 use crypto::sha2::Sha256 as Hash;
+pub use utils::eq;
 
 
 pub const HASH_LEN: usize = 256 / 8;
@@ -73,8 +74,8 @@ impl Key {
             .zip(self.0.iter())
             .zip(hash!(data))
             .all(|(((x, y), &(ref x_p, ref y_p)), v)| {
-                hash!(* (HASH_LEN * 8) - (v as usize + 1), x) == *x_p
-                    && hash!(* v as usize + 1, y) == *y_p
+                eq(&hash!(* (HASH_LEN * 8) - (v as usize + 1), x), x_p)
+                    && eq(&hash!(* v as usize + 1, y), y_p)
             })
     }
 
@@ -90,7 +91,7 @@ impl Key {
 impl<V> From<V> for Key where V: Into<Vec<u8>> {
     fn from(v: V) -> Key {
         let v = v.into();
-        Key (
+        Key(
             v.chunks(HASH_LEN * 2)
                 .map(|s| s.split_at(HASH_LEN))
                 .map(|(x, y)| (x.into(), y.into()))

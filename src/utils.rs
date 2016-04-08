@@ -7,7 +7,7 @@ macro_rules! hash {
         out
     }};
     ( * $t:expr, $data:expr ) => {
-        (0..$t-1).fold(hash!($data.as_ref()), |sum, _| hash!(&sum))
+        (1..$t).fold(hash!($data.as_ref()), |sum, _| hash!(&sum))
     }
 }
 
@@ -18,6 +18,18 @@ macro_rules! rand {
             .gen_iter().take($len).collect::<Vec<_>>()
     }};
     () => { rand!($crate::HASH_LEN) }
+}
+
+pub fn eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() { return false };
+
+    let mut d = 0;
+    for (x, y) in a.iter().zip(b.iter()) {
+        d |= x ^ y;
+    }
+
+    // NOTE ((1 & ((d - 1) >> 8)) - 1) != 0
+    d == 0
 }
 
 
@@ -31,4 +43,16 @@ fn test_macro_test() {
         hash!(&hash!(&hash!(data))),
         hash!(* 3, data)
     );
+}
+
+#[test]
+fn test_eq() {
+    assert!(eq(
+        b"Hello world.",
+        b"Hello world."
+    ));
+    assert!(!eq(
+        b"Hello world.",
+        b"Hello-world!"
+    ));
 }
