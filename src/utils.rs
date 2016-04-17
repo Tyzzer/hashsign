@@ -1,7 +1,8 @@
 macro_rules! hash {
     ( $data:expr ) => {{
+        use $crate::Digest;
         let mut out = vec![0; $crate::HASH_LEN];
-        let mut hash_obj = Hash::new();
+        let mut hash_obj = $crate::Hash::new();
         hash_obj.input($data);
         hash_obj.result(&mut out);
         out
@@ -35,8 +36,6 @@ pub fn eq(a: &[u8], b: &[u8]) -> bool {
 
 #[test]
 fn test_macro_test() {
-    use crypto::digest::Digest;
-    use crypto::sha2::Sha256 as Hash;
     let data = b"Hello world.";
 
     assert_eq!(

@@ -3,8 +3,8 @@ extern crate rand;
 
 #[macro_use] mod utils;
 
-use crypto::digest::Digest;
-use crypto::sha2::Sha256 as Hash;
+pub use crypto::digest::Digest;
+pub use crypto::sha2::Sha256 as Hash;
 pub use utils::eq;
 
 
