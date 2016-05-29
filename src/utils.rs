@@ -1,15 +1,17 @@
 macro_rules! hash {
-    ( $data:expr ) => {{
-        use $crate::Digest;
-        let mut out = vec![0; $crate::HASH_LEN];
-        let mut hash_obj = $crate::Hash::new();
-        hash_obj.input($data);
-        hash_obj.result(&mut out);
+    ( $hasher:expr, $data:expr ) => {{
+        let mut hasher = $hasher.clone();
+        let mut out = vec![0; hasher.output_bytes()];
+        hasher.input($data);
+        hasher.result(&mut out);
         out
     }};
-    ( * $t:expr, $data:expr ) => {
-        (1..$t).fold(hash!($data.as_ref()), |sum, _| hash!(&sum))
-    }
+    ( $hasher:expr, $t:expr, $data:expr ) => {
+        (1..$t).fold(
+            hash!($hasher, $data.as_ref()),
+            |sum, _| hash!($hasher, &sum)
+        )
+    };
 }
 
 macro_rules! rand {
@@ -36,11 +38,15 @@ pub fn eq(a: &[u8], b: &[u8]) -> bool {
 
 #[test]
 fn test_macro_test() {
+    use crypto::sha2::Sha256;
+    use crypto::digest::Digest;
+
     let data = b"Hello world.";
+    let hasher = Sha256::new();
 
     assert_eq!(
-        hash!(&hash!(&hash!(data))),
-        hash!(* 3, data)
+        hash!(hasher, &hash!(hasher, &hash!(hasher, data))),
+        hash!(hasher, 3, data)
     );
 }
 
