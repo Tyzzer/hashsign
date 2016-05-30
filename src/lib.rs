@@ -3,13 +3,14 @@ extern crate rand;
 
 #[macro_use] mod utils;
 
+use std::{ fmt, cmp };
 use std::marker::PhantomData;
 pub use crypto::digest::Digest;
 pub use crypto::sha2::Sha256;
 pub use utils::{ eq, Hash };
 
 
-#[derive(Clone, Hash, Debug, PartialEq)]
+#[derive(Clone, Hash)]
 pub struct Key<H: Hash>(pub Vec<(Vec<u8>, Vec<u8>)>, PhantomData<H>);
 
 impl Default for Key<Sha256> {
@@ -107,5 +108,17 @@ impl<H: Hash> Key<H> {
                 sum.append(&mut [x, y].concat());
                 sum
             })
+    }
+}
+
+impl<H: Hash> fmt::Debug for Key<H> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl<H: Hash> cmp::PartialEq<Key<H>> for Key<H> {
+    fn eq(&self, rhs: &Key<H>) -> bool {
+        self.0 == rhs.0
     }
 }

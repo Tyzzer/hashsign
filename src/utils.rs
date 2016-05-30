@@ -1,6 +1,7 @@
 use crypto::sha2::Sha256;
 use crypto::digest::Digest;
 
+
 macro_rules! hash {
     ( $hasher:expr, $t:expr, $data:expr ) => {
         (1..$t).fold(
@@ -16,7 +17,6 @@ macro_rules! rand {
         $crate::rand::os::OsRng::new().unwrap()
             .gen_iter().take($len).collect::<Vec<_>>()
     }};
-    () => { rand!($crate::HASH_LEN) }
 }
 
 pub fn eq(a: &[u8], b: &[u8]) -> bool {
