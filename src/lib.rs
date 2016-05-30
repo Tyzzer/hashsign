@@ -3,65 +3,59 @@ extern crate rand;
 
 #[macro_use] mod utils;
 
-use std::fmt;
+use std::marker::PhantomData;
 pub use crypto::digest::Digest;
 pub use crypto::sha2::Sha256;
-pub use utils::eq;
+pub use utils::{ eq, Hash };
 
 
-#[derive(Clone, Hash)]
-pub struct Key<H: Digest+Clone> {
-    pub hasher: H,
-    pub val: Vec<(Vec<u8>, Vec<u8>)>
-}
+#[derive(Clone, Hash, Debug, PartialEq)]
+pub struct Key<H: Hash>(pub Vec<(Vec<u8>, Vec<u8>)>, PhantomData<H>);
 
 impl Default for Key<Sha256> {
-    /// s3. For each chunk, generate a pair of secret random 256-bit numbers.
-    /// These 64 numbers are your private key.
-    fn default() -> Key<Sha256> {
-        Key::new(Sha256::new())
-    }
+    fn default() -> Key<Sha256> { Key::new() }
 }
 
-impl<H: Digest+Clone> Key<H> {
-    pub fn new(hasher: H) -> Key<H> {
-        assert_eq!(hasher.output_bits(), 256);
-        let val = (0..hasher.output_bytes())
-            .map(|_| (
-                rand!(hasher.output_bytes()),
-                rand!(hasher.output_bytes()))
-            )
-            .collect();
-        Key {
-            hasher: hasher,
-            val: val
-        }
+impl<H: Hash> Key<H> {
+    /// s3. For each chunk, generate a pair of secret random 256-bit numbers.
+    /// These 64 numbers are your private key.
+    pub fn new() -> Key<H> {
+        Key(
+            (0..H::bytes())
+                .map(|_| (
+                    rand!(H::bytes()),
+                    rand!(H::bytes())
+                ))
+                .collect(),
+            PhantomData
+        )
     }
 
-    pub fn from<V: Into<Vec<u8>>>(hasher: H, v: V) -> Key<H> {
+    pub fn from<V: Into<Vec<u8>>>(v: V) -> Key<H> {
         let v = v.into();
-        Key {
-            hasher: hasher.clone(),
-            val: v.chunks(hasher.output_bytes() * 2)
-                .map(|s| s.split_at(hasher.output_bytes()))
+        assert_eq!(v.len(), 2048);
+        Key(
+            v.chunks(H::bytes() * 2)
+                .map(|s| s.split_at(H::bytes()))
                 .map(|(x, y)| (x.into(), y.into()))
-                .collect()
-        }
+                .collect(),
+            PhantomData
+        )
     }
 
     /// s4. Hash each of these numbers 258 times.
     /// This final set of 32 pairs of 2 hashes each are your public key.
     /// (Note: Use a hash chain and this public key becomes just 256 bits)
     pub fn public(&self) -> Key<H> {
-        Key {
-            hasher: self.hasher.clone(),
-            val: self.val.iter()
+        Key(
+            self.0.iter()
                 .map(|&(ref x, ref y)| (
-                    hash!(self.hasher, self.hasher.output_bytes() * 8, x),
-                    hash!(self.hasher, self.hasher.output_bytes() * 8, y)
+                    hash!(H::hash, H::bytes() * 8, x),
+                    hash!(H::hash, H::bytes() * 8, y)
                 ))
-                .collect()
-        }
+                .collect(),
+            PhantomData
+        )
     }
 
     /// s1. Take the SHA-256 hash of the document you want to sign
@@ -77,13 +71,13 @@ impl<H: Digest+Clone> Key<H> {
     /// and you have a 32*2*(256/8) = 2kb signature!
     /// This is 4x smaller than the usual Lamport signature.
     pub fn sign(&self, data: &[u8]) -> Vec<u8> {
-        hash!(self.hasher, data).iter()
-            .zip(self.val.clone())
+        H::hash(data).iter()
+            .zip(self.0.clone())
             .map(|(&n, (x, y))| [
-                hash!(self.hasher, n as usize +1, x),
-                hash!(self.hasher, (self.hasher.output_bytes() * 8) - (n as usize + 1), y)
+                hash!(H::hash, n as usize +1, x),
+                hash!(H::hash, (H::bytes() * 8) - (n as usize + 1), y)
             ].concat())
-            .collect::<Vec<Vec<u8>>>()
+            .collect::<Vec<_>>()
             .concat()
     }
 
@@ -96,29 +90,22 @@ impl<H: Digest+Clone> Key<H> {
     /// v7. If there are more chunks, check the next chunk starting with step (3)
     /// v8. The signature is valid if all chunks are signed correctly.
     pub fn verify(&self, sign: &[u8], data: &[u8]) -> bool {
-        sign.chunks(self.hasher.output_bytes() * 2)
-            .map(|s| s.split_at(self.hasher.output_bytes()))
-            .zip(self.val.iter())
-            .zip(hash!(self.hasher, data))
+        sign.chunks(H::bytes() * 2)
+            .map(|s| s.split_at(H::bytes()))
+            .zip(self.0.iter())
+            .zip(H::hash(data))
             .all(|(((x, y), &(ref x_p, ref y_p)), v)| {
-                eq(
-                    &hash!(self.hasher, (self.hasher.output_bytes() * 8) - (v as usize + 1), x),
-                    x_p
-                )
-                    && eq(&hash!(self.hasher, v as usize + 1, y), y_p)
+                eq(&hash!(H::hash, (H::bytes() * 8) - (v as usize + 1), x), x_p)
+                    && eq(&hash!(H::hash, v as usize + 1, y), y_p)
             })
     }
 
     pub fn output(&self) -> Vec<u8> {
-        self.val.iter()
-            .map(|&(ref x, ref y)| [x.to_vec(), y.to_vec()].concat())
-            .collect::<Vec<Vec<u8>>>()
-            .concat()
-    }
-}
-
-impl<H: Digest+Clone> fmt::Debug for Key<H> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.val.fmt(f)
+        self.0.iter()
+            .cloned()
+            .fold(Vec::new(), |mut sum, (x, y)| {
+                sum.append(&mut [x, y].concat());
+                sum
+            })
     }
 }

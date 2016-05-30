@@ -25,9 +25,9 @@ fn test_sign() {
 fn test_output() {
     let sk = Key::default();
     let sk_data = sk.output();
-    assert_eq!(sk.val, Key::from(Sha256::new(), sk_data).val);
+    assert_eq!(sk.0, Key::<Sha256>::from(sk_data).0);
 
     let pk = sk.public();
     let pk_data = pk.output();
-    assert_eq!(pk.val, Key::from(Sha256::new(), pk_data).val);
+    assert_eq!(pk.0, Key::<Sha256>::from(pk_data).0);
 }

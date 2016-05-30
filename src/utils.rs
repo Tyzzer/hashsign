@@ -1,15 +1,11 @@
+use crypto::sha2::Sha256;
+use crypto::digest::Digest;
+
 macro_rules! hash {
-    ( $hasher:expr, $data:expr ) => {{
-        let mut hasher = $hasher.clone();
-        let mut out = vec![0; hasher.output_bytes()];
-        hasher.input($data);
-        hasher.result(&mut out);
-        out
-    }};
     ( $hasher:expr, $t:expr, $data:expr ) => {
         (1..$t).fold(
-            hash!($hasher, $data.as_ref()),
-            |sum, _| hash!($hasher, &sum)
+            $hasher($data.as_ref()),
+            |sum, _| $hasher(&sum)
         )
     };
 }
@@ -35,18 +31,36 @@ pub fn eq(a: &[u8], b: &[u8]) -> bool {
     d == 0
 }
 
+pub trait Hash {
+    fn hash(data: &[u8]) -> Vec<u8>;
+    fn bits() -> usize;
+    fn bytes() -> usize;
+}
+
+impl Hash for Sha256 {
+    fn hash(data: &[u8]) -> Vec<u8> {
+        let mut hasher = Sha256::new();
+        let mut output = vec![0; Sha256::new().output_bytes()];
+        hasher.input(data);
+        hasher.result(&mut output);
+        output
+    }
+    fn bits() -> usize {
+        Sha256::new().output_bits()
+    }
+    fn bytes() -> usize {
+        Sha256::new().output_bytes()
+    }
+}
+
 
 #[test]
 fn test_macro_test() {
-    use crypto::sha2::Sha256;
-    use crypto::digest::Digest;
-
     let data = b"Hello world.";
-    let hasher = Sha256::new();
 
     assert_eq!(
-        hash!(hasher, &hash!(hasher, &hash!(hasher, data))),
-        hash!(hasher, 3, data)
+        Sha256::hash(&Sha256::hash(&Sha256::hash(data))),
+        hash!(Sha256::hash, 3, data)
     );
 }
 
