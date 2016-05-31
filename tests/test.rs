@@ -6,7 +6,7 @@ extern crate hashsign;
 #[macro_use] mod utils;
 
 use crypto::sha2::Sha256;
-use hashsign::Key;
+use hashsign::lamport::Key;
 
 
 #[test]
