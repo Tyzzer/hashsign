@@ -1,5 +1,9 @@
+extern crate rand;
 extern crate crypto;
 extern crate hashsign;
+
+#[path = "../src/utils.rs"]
+#[macro_use] mod utils;
 
 use crypto::sha2::Sha256;
 use hashsign::Key;
@@ -7,17 +11,16 @@ use hashsign::Key;
 
 #[test]
 fn test_sign() {
-    let data = b"Hello world!";
+    let data = rand!(64);
 
     let sk = Key::default();
     let pk = sk.public();
-    let s = sk.sign(data);
+    let s = sk.sign(&data);
 
-    assert!(pk.verify(&s, data));
-    assert!(!pk.verify(&s, b"Hello world."));
+    assert!(pk.verify(&s, &data));
     assert!(!pk.verify(
-        &[vec![0; 32].as_ref(), &s[32..]].concat(),
-        data
+        &[&[0; 32], &s[32..]].concat(),
+        &data
     ));
 }
 

@@ -4,8 +4,8 @@ use crypto::digest::Digest;
 
 macro_rules! hash {
     ( $hasher:expr, $t:expr, $data:expr ) => {
-        (1..$t).fold(
-            $hasher($data.as_ref()),
+        (0..$t).fold(
+            $data.to_vec(),
             |sum, _| $hasher(&sum)
         )
     };
@@ -55,12 +55,20 @@ impl Hash for Sha256 {
 
 
 #[test]
-fn test_macro_test() {
-    let data = b"Hello world.";
+fn test_hash_macro() {
+    let data = rand!(64);
 
     assert_eq!(
-        Sha256::hash(&Sha256::hash(&Sha256::hash(data))),
-        hash!(Sha256::hash, 3, data)
+        data,
+        hash!(Sha256::hash, 0, &data)
+    );
+    assert_eq!(
+        Sha256::hash(&data),
+        hash!(Sha256::hash, 1, &data)
+    );
+    assert_eq!(
+        Sha256::hash(&Sha256::hash(&Sha256::hash(&data))),
+        hash!(Sha256::hash, 3, &data)
     );
 }
 

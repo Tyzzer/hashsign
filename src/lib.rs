@@ -95,10 +95,10 @@ impl<H: Hash> Key<H> {
             .map(|s| s.split_at(H::bytes()))
             .zip(&self.0)
             .zip(H::hash(data))
-            .all(|(((x, y), &(ref x_p, ref y_p)), v)| {
+            .all(|(((x, y), &(ref x_p, ref y_p)), v)|
                 eq(&hash!(H::hash, (H::bytes() * 8) - (v as usize + 1), x), x_p)
                     && eq(&hash!(H::hash, v as usize + 1, y), y_p)
-            })
+            )
     }
 
     pub fn output(&self) -> Vec<u8> {
