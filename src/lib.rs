@@ -10,7 +10,7 @@ pub use crypto::sha2::Sha256;
 pub use utils::{ eq, Hash };
 
 
-#[derive(Clone, Hash)]
+#[derive(Clone)]
 pub struct Key<H: Hash>(pub Vec<(Vec<u8>, Vec<u8>)>, PhantomData<H>);
 
 impl Default for Key<Sha256> {
@@ -73,9 +73,9 @@ impl<H: Hash> Key<H> {
     /// This is 4x smaller than the usual Lamport signature.
     pub fn sign(&self, data: &[u8]) -> Vec<u8> {
         H::hash(data).iter()
-            .zip(self.0.clone())
-            .map(|(&n, (x, y))| [
-                hash!(H::hash, n as usize +1, x),
+            .zip(&self.0)
+            .map(|(&n, &(ref x, ref y))| [
+                hash!(H::hash, n as usize + 1, x),
                 hash!(H::hash, (H::bytes() * 8) - (n as usize + 1), y)
             ].concat())
             .collect::<Vec<_>>()
@@ -93,7 +93,7 @@ impl<H: Hash> Key<H> {
     pub fn verify(&self, sign: &[u8], data: &[u8]) -> bool {
         sign.chunks(H::bytes() * 2)
             .map(|s| s.split_at(H::bytes()))
-            .zip(self.0.iter())
+            .zip(&self.0)
             .zip(H::hash(data))
             .all(|(((x, y), &(ref x_p, ref y_p)), v)| {
                 eq(&hash!(H::hash, (H::bytes() * 8) - (v as usize + 1), x), x_p)
@@ -103,9 +103,9 @@ impl<H: Hash> Key<H> {
 
     pub fn output(&self) -> Vec<u8> {
         self.0.iter()
-            .cloned()
-            .fold(Vec::new(), |mut sum, (x, y)| {
-                sum.append(&mut [x, y].concat());
+            .fold(Vec::new(), |mut sum, &(ref x, ref y)| {
+                sum.extend_from_slice(x);
+                sum.extend_from_slice(y);
                 sum
             })
     }
