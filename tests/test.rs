@@ -5,11 +5,11 @@ extern crate hashsign;
 #[path = "../src/utils.rs"]
 #[macro_use] mod utils;
 
-use hashsign::lamport::Key;
+use hashsign::Key;
 
 
 #[test]
-fn test_sign() {
+fn test_lamport_sign() {
     let data = rand!(64);
 
     let sk = Key::default();
@@ -24,7 +24,7 @@ fn test_sign() {
 }
 
 #[test]
-fn test_output() {
+fn test_lamport_output() {
     let sk = Key::default();
     let sk_data = sk.output().unwrap();
     assert_eq!(sk, Key::from(sk_data).unwrap());

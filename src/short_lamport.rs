@@ -9,7 +9,7 @@ use bincode::serde::{
 };
 
 
-#[derive(Clone)]
+#[derive(Clone, Hash)]
 pub struct Key<H: Hash>(pub Vec<(Vec<u8>, Vec<u8>)>, PhantomData<H>);
 
 #[derive(Serialize, Deserialize)]
