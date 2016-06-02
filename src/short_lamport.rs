@@ -1,6 +1,5 @@
 use std::{ fmt, cmp };
 use std::marker::PhantomData;
-use crypto::sha2::Sha256;
 use utils::{ eq, Hash };
 use bincode::SizeLimit;
 use bincode::serde::{
@@ -9,15 +8,11 @@ use bincode::serde::{
 };
 
 
-#[derive(Clone, Hash)]
+#[derive(Clone)]
 pub struct Key<H: Hash>(pub Vec<(Vec<u8>, Vec<u8>)>, PhantomData<H>);
 
 #[derive(Serialize, Deserialize)]
 struct KeyBin(Vec<(Vec<u8>, Vec<u8>)>);
-
-impl Default for Key<Sha256> {
-    fn default() -> Key<Sha256> { Key::new() }
-}
 
 impl<H: Hash> Key<H> {
     /// s3. For each chunk, generate a pair of secret random 256-bit numbers.
@@ -34,10 +29,7 @@ impl<H: Hash> Key<H> {
     pub fn from<V: Into<Vec<u8>>>(v: V) -> Result<Key<H>, DeserializeError> {
         let v = v.into();
         let KeyBin(key) = deserialize(&v)?;
-        Ok(Key(
-            key,
-            PhantomData
-        ))
+        Ok(Key(key, PhantomData))
     }
 
     /// s4. Hash each of these numbers 258 times.
@@ -101,7 +93,7 @@ impl<H: Hash> Key<H> {
         )
     }
 
-    pub fn output(&self) -> Result<Vec<u8>, SerializeError> {
+    pub fn export(&self) -> Result<Vec<u8>, SerializeError> {
         serialize(&KeyBin(self.0.clone()), SizeLimit::Infinite)
     }
 }
@@ -116,4 +108,35 @@ impl<H: Hash> cmp::PartialEq<Key<H>> for Key<H> {
     fn eq(&self, rhs: &Key<H>) -> bool {
         self.0 == rhs.0
     }
+}
+
+
+#[test]
+fn test_lamport_sign() {
+    use crypto::sha2::Sha256;
+
+    let data = rand!(64);
+
+    let sk = Key::<Sha256>::new();
+    let pk = sk.public();
+    let s = sk.sign(&data).unwrap();
+
+    assert!(pk.verify(&s, &data).unwrap_or(false));
+    assert!(!pk.verify(
+        &[&[0; 32], &s[32..]].concat(),
+        &data
+    ).unwrap());
+}
+
+#[test]
+fn test_lamport_export() {
+    use crypto::sha2::Sha256;
+
+    let sk = Key::<Sha256>::new();
+    let sk_data = sk.export().unwrap();
+    assert_eq!(sk, Key::from(sk_data).unwrap());
+
+    let pk = sk.public();
+    let pk_data = pk.export().unwrap();
+    assert_eq!(pk, Key::from(pk_data).unwrap());
 }

@@ -12,11 +12,28 @@ macro_rules! hash {
 }
 
 macro_rules! rand {
+    ( @len $rng:expr, $len:expr ) => {
+        $rng.gen_iter().take($len).collect::<Vec<_>>()
+    };
     ( $len:expr ) => {{
-        use $crate::rand::Rng;
-        $crate::rand::os::OsRng::new().unwrap()
-            .gen_iter().take($len).collect::<Vec<_>>()
+        use ::rand::Rng;
+        match ::rand::os::OsRng::new() {
+            Ok(mut rng) => rand!(@len rng, $len),
+            _ => rand!(@len ::rand::thread_rng(), $len)
+        }
     }};
+    ( @choose $rng:expr, $range:expr, $num:expr ) => {
+        ::rand::sample(&mut $rng, $range, $num)
+    };
+    ( choose $range:expr, $num ) => {
+        match ::rand::os::OsRng::new() {
+            Ok(mut rng) => rand!(@choose rng, $range, $num),
+            _ => rand!(@choose ::rand::thread_rng(), $range, $num)
+        }
+    };
+    ( choose $range:expr ) => {
+        rand!(choose $range, 1).remove(0)
+    }
 }
 
 pub fn eq(a: &[u8], b: &[u8]) -> bool {

@@ -24,24 +24,27 @@ impl<H: Hash+Clone> HashSign<H> {
     pub fn new(level: u32) -> HashSign<H> {
         let keys = (0..2usize.pow(level))
             .map(|_| Key::new())
-            .collect::<Vec<Key<H>>>();
+            .collect::<Vec<_>>();
         let pkeys = keys.iter()
-            .map(|key| key.public().output().unwrap())
-            .collect::<Vec<Vec<u8>>>();
-
-        let tree = Tree::build(
-            pkeys.iter()
-                .map(|pk| Tree::leaf(pk))
-                .collect()
-        ).remove(0);
-        let map = pkeys.iter()
-            .zip(keys)
-            .map(|(pk, k)| (pk.clone(), k))
-            .collect::<HashMap<Vec<u8>, Key<H>>>();
+            .map(|key| key.public().export().unwrap())
+            .map(|pk| H::hash(&pk))
+            .collect::<Vec<_>>();
 
         HashSign {
-            tree: tree,
-            map: map
+            tree: Tree::build(
+                pkeys.iter()
+                    .cloned()
+                    .map(|pk| Tree::Leaf(pk))
+                    .collect()
+            ),
+            map: pkeys.iter()
+                .cloned()
+                .zip(keys)
+                .collect()
         }
+    }
+
+    pub fn root_public_export(&self) -> Vec<u8> {
+        self.tree.hash()
     }
 }
