@@ -98,6 +98,26 @@ impl<H: Hash+Clone> Tree<H> {
             _ => unreachable!()
         }
     }
+
+    pub fn vals(&self) -> Option<Vec<Vec<u8>>> {
+        match *self {
+            Tree::Node(ref nodes) => {
+                if nodes.iter().all(|node| node.is_leaf()) {
+                    Some(
+                        nodes.iter()
+                            .map(|node| node.vals().unwrap().remove(0))
+                            .collect()
+                    )
+                } else {
+                    nodes.iter()
+                        .find(|&node| !node.is_leaf())
+                        .and_then(|node| node.vals())
+                }
+            },
+            Tree::Leaf(ref leaf) => Some(vec![leaf.clone()]),
+            _ => unreachable!()
+        }
+    }
 }
 
 impl<H: Clone> Into<TreeBin> for Tree<H> {
@@ -221,4 +241,20 @@ fn test_treebin() {
     let bin_root: Tree<Sha256> = treebin.into();
 
     assert_eq!(root.hash(), bin_root.hash());
+}
+
+#[test]
+fn test_tree_vals() {
+    use crypto::sha2::Sha256;
+
+    let leafs = [rand!(32), rand!(32), rand!(32), rand!(32)];
+    let root = Tree::<Sha256>::build(
+        leafs.iter()
+            .map(|leaf| Tree::Leaf(leaf.clone()))
+            .collect()
+    );
+
+    let (val_root, val) = root.choose();
+
+    assert!(val_root.vals().map_or(false, |vals| vals.contains(&val)));
 }
