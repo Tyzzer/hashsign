@@ -29,6 +29,14 @@ impl<H: Hash> Tree<H> {
         Tree::Leaf(H::hash(data))
     }
 
+    pub fn is_leaf(&self) -> bool {
+        match *self {
+            Tree::Node(_) => false,
+            Tree::Leaf(_) => true,
+            _ => unreachable!()
+        }
+    }
+
     pub fn hash(&self) -> Vec<u8> {
         match *self {
             Tree::Node(ref nodes) => {
@@ -68,6 +76,28 @@ impl<H: Hash+Clone> Tree<H> {
             )
         }
     }
+
+    pub fn choose(&self) -> (Tree<H>, Vec<u8>) {
+        match *self {
+            Tree::Node(ref nodes) => {
+                let index = rand!(choose 0..nodes.len());
+                let mut xleaf = Vec::new();
+                let xtree = nodes.iter()
+                    .enumerate()
+                    .map(|(i, node)| if i == index {
+                        let (tree, leaf) = node.choose();
+                        xleaf = leaf;
+                        tree
+                    } else {
+                        Tree::Leaf(node.hash())
+                    })
+                    .collect();
+                (Tree::Node(xtree), xleaf)
+            },
+            Tree::Leaf(ref leaf) => (Tree::Leaf(leaf.clone()), leaf.clone()),
+            _ => unreachable!()
+        }
+    }
 }
 
 impl<H: Clone> Into<TreeBin> for Tree<H> {
@@ -85,9 +115,9 @@ impl<H: Clone> Into<TreeBin> for Tree<H> {
     }
 }
 
-impl<H: Clone> From<TreeBin> for Tree<H> {
-    fn from(bin: TreeBin) -> Tree<H> {
-        match bin {
+impl<H: Clone> Into<Tree<H>> for TreeBin {
+    fn into(self) -> Tree<H> {
+        match self {
             TreeBin::Node(nodes) => Tree::Node(
                 nodes.iter()
                     .cloned()
@@ -154,4 +184,41 @@ fn test_tree_build() {
             ].concat())
         ].concat())
     );
+}
+
+#[test]
+fn test_tree_choose() {
+    use crypto::sha2::Sha256;
+
+    let leafs = [rand!(32), rand!(32), rand!(32), rand!(32)];
+    let root = Tree::<Sha256>::build(
+        leafs.iter()
+            .map(|leaf| Tree::Leaf(leaf.clone()))
+            .collect()
+    );
+
+    let (val_root, val) = root.choose();
+
+    assert_eq!(root.hash(), val_root.hash());
+    assert!(leafs.iter().find(|&leaf| leaf == &val).is_some());
+}
+
+#[test]
+fn test_treebin() {
+    use crypto::sha2::Sha256;
+    use bincode::SizeLimit;
+    use bincode::serde::{ serialize, deserialize };
+
+    let root = Tree::<Sha256>::build(
+        [rand!(32), rand!(32), rand!(32), rand!(32)].iter()
+            .map(|leaf| Tree::leaf(leaf))
+            .collect()
+    );
+
+    let treebin: TreeBin = root.clone().into();
+    let bin = serialize(&treebin, SizeLimit::Infinite).unwrap();
+    let treebin: TreeBin = deserialize(&bin).unwrap();
+    let bin_root: Tree<Sha256> = treebin.into();
+
+    assert_eq!(root.hash(), bin_root.hash());
 }

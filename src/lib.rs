@@ -47,4 +47,15 @@ impl<H: Hash+Clone> HashSign<H> {
     pub fn root_public_export(&self) -> Vec<u8> {
         self.tree.hash()
     }
+
+    pub fn choose_sign(&mut self) -> Result<(Key<H>, Tree<H>), ()> {
+        if self.map.is_empty() { Err(())? };
+
+        let (tree, pkhash) = self.tree.choose();
+
+        match self.map.remove(&pkhash) {
+            Some(key) => Ok((key, tree)),
+            None => self.choose_sign()
+        }
+    }
 }

@@ -15,17 +15,10 @@ macro_rules! rand {
     ( @len $rng:expr, $len:expr ) => {
         $rng.gen_iter().take($len).collect::<Vec<_>>()
     };
-    ( $len:expr ) => {{
-        use ::rand::Rng;
-        match ::rand::os::OsRng::new() {
-            Ok(mut rng) => rand!(@len rng, $len),
-            _ => rand!(@len ::rand::thread_rng(), $len)
-        }
-    }};
     ( @choose $rng:expr, $range:expr, $num:expr ) => {
         ::rand::sample(&mut $rng, $range, $num)
     };
-    ( choose $range:expr, $num ) => {
+    ( choose $range:expr, $num:expr ) => {
         match ::rand::os::OsRng::new() {
             Ok(mut rng) => rand!(@choose rng, $range, $num),
             _ => rand!(@choose ::rand::thread_rng(), $range, $num)
@@ -33,7 +26,17 @@ macro_rules! rand {
     };
     ( choose $range:expr ) => {
         rand!(choose $range, 1).remove(0)
-    }
+    };
+    ( _ ) => {
+        ::rand::random()
+    };
+    ( $len:expr ) => {{
+        use ::rand::Rng;
+        match ::rand::os::OsRng::new() {
+            Ok(mut rng) => rand!(@len rng, $len),
+            _ => rand!(@len ::rand::thread_rng(), $len)
+        }
+    }};
 }
 
 pub fn eq(a: &[u8], b: &[u8]) -> bool {
