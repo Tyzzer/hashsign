@@ -26,9 +26,8 @@ impl<H: Hash> Key<H> {
         )
     }
 
-    pub fn from<V: Into<Vec<u8>>>(v: V) -> Result<Key<H>, DeserializeError> {
-        let v = v.into();
-        let KeyBin(key) = deserialize(&v)?;
+    pub fn from(v: &[u8]) -> Result<Key<H>, DeserializeError> {
+        let KeyBin(key) = deserialize(v)?;
         Ok(Key(key, PhantomData))
     }
 
@@ -134,9 +133,9 @@ fn test_lamport_export() {
 
     let sk = Key::<Sha256>::new();
     let sk_data = sk.export().unwrap();
-    assert_eq!(sk, Key::from(sk_data).unwrap());
+    assert_eq!(sk, Key::from(&sk_data).unwrap());
 
     let pk = sk.public();
     let pk_data = pk.export().unwrap();
-    assert_eq!(pk, Key::from(pk_data).unwrap());
+    assert_eq!(pk, Key::from(&pk_data).unwrap());
 }

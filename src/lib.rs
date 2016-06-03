@@ -28,6 +28,13 @@ pub struct HashSign<H: Hash+Clone> {
     map: HashMap<Vec<u8>, Key<H>>
 }
 
+#[derive(Serialize, Deserialize)]
+struct SignBin {
+    tree: Vec<u8>,
+    otk: Vec<u8>,
+    sign: Vec<u8>
+}
+
 impl<H: Hash+Clone> HashSign<H> {
     pub fn new(level: u32) -> HashSign<H> {
         let keys = (0..2usize.pow(level))
@@ -52,7 +59,7 @@ impl<H: Hash+Clone> HashSign<H> {
         }
     }
 
-    pub fn root_public_export(&self) -> Vec<u8> {
+    pub fn public_export(&self) -> Vec<u8> {
         self.tree.hash()
     }
 
@@ -66,6 +73,17 @@ impl<H: Hash+Clone> HashSign<H> {
             Some(key) => Ok((key, serialize(&treebin, SizeLimit::Infinite)?)),
             None => self.choose_sign()
         }
+    }
+
+    pub fn sign(&mut self, data: &[u8]) -> Result<Vec<u8>, SignError> {
+        let (otk, tree) = self.choose_sign()?;
+        let sign = otk.sign(data)?;
+        let signbin = SignBin {
+            tree: tree,
+            otk: otk.public().export()?,
+            sign: sign
+        };
+        Ok(serialize(&signbin, SizeLimit::Infinite)?)
     }
 }
 
@@ -96,6 +114,16 @@ impl<H: Hash+Clone> HashVerify<H> {
             Ok(false)
         }
     }
+
+    pub fn verify(&self, signbin: &[u8], data: &[u8]) -> Result<bool, VerifyError> {
+        let sign: SignBin = deserialize(signbin)?;
+        let otk = Key::<H>::from(&sign.otk)?;
+
+        Ok(
+            self.choose_verify(&sign.tree, &sign.otk)?
+                && otk.verify(&sign.sign, data)?
+        )
+    }
 }
 
 
@@ -113,8 +141,7 @@ impl From<SerializeError> for SignError {
 
 #[derive(Debug)]
 pub enum VerifyError {
-    BinCode(DeserializeError),
-    Fail
+    BinCode(DeserializeError)
 }
 
 impl From<DeserializeError> for VerifyError {

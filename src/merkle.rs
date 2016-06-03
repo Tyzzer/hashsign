@@ -12,7 +12,7 @@ pub enum Tree<H> {
     __(PhantomData<H>)
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum TreeBin {
     Node(Vec<TreeBin>),
     Leaf(Vec<u8>)
