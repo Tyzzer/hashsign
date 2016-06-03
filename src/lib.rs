@@ -16,8 +16,9 @@ use bincode::serde::{
     serialize, deserialize,
     SerializeError, DeserializeError
 };
-use utils::{ eq, Hash };
+use utils::eq;
 use merkle::TreeBin;
+pub use utils::Hash;
 pub use lamport::Key;
 pub use merkle::Tree;
 

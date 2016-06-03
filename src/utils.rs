@@ -28,7 +28,10 @@ macro_rules! rand {
         rand!(choose $range, 1).remove(0)
     };
     ( _ ) => {
-        ::rand::random()
+        match ::rand::os::OsRng::new() {
+            Ok(mut rng) => rng.gen(),
+            _ => ::rand::thread_rng().gen()
+        }
     };
     ( $len:expr ) => {{
         use ::rand::Rng;
@@ -39,6 +42,7 @@ macro_rules! rand {
     }};
 }
 
+#[inline]
 pub fn eq(a: &[u8], b: &[u8]) -> bool {
     if a.len() != b.len() { return false };
 
@@ -65,9 +69,13 @@ impl Hash for Sha256 {
         hasher.result(&mut output);
         output
     }
+
+    #[inline]
     fn bits() -> usize {
         Sha256::new().output_bits()
     }
+
+    #[inline]
     fn bytes() -> usize {
         Sha256::new().output_bytes()
     }
