@@ -12,35 +12,22 @@ macro_rules! hash {
 }
 
 macro_rules! rand {
-    ( @len $rng:expr, $len:expr ) => {
-        $rng.gen_iter().take($len).collect::<Vec<_>>()
-    };
-    ( @choose $rng:expr, $range:expr, $num:expr ) => {
-        ::rand::sample(&mut $rng, $range, $num)
-    };
-    ( choose $range:expr, $num:expr ) => {
-        match ::rand::os::OsRng::new() {
-            Ok(mut rng) => rand!(@choose rng, $range, $num),
-            _ => rand!(@choose ::rand::thread_rng(), $range, $num)
-        }
-    };
+    ( choose $range:expr, $num:expr ) => {{
+        use ::rand::{ OsRng, sample };
+        sample(&mut OsRng::new().unwrap(), $range, $num)
+    }};
     ( choose $range:expr ) => {
         rand!(choose $range, 1).remove(0)
     };
-    ( _ ) => {
-        match ::rand::os::OsRng::new() {
-            Ok(mut rng) => rng.gen(),
-            _ => ::rand::thread_rng().gen()
-        }
-    };
     ( $len:expr ) => {{
-        use ::rand::Rng;
-        match ::rand::os::OsRng::new() {
-            Ok(mut rng) => rand!(@len rng, $len),
-            _ => rand!(@len ::rand::thread_rng(), $len)
-        }
+        use ::rand::{ Rng, OsRng };
+        OsRng::new().unwrap()
+            .gen_iter()
+            .take($len)
+            .collect::<Vec<_>>()
     }};
 }
+
 
 #[inline]
 pub fn eq(a: &[u8], b: &[u8]) -> bool {
