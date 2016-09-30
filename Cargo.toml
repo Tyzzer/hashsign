@@ -4,8 +4,8 @@ version = "0.1.0"
 authors = ["quininer kel <quininer@live.com>"]
 
 [dependencies]
-serde = "0.7"
-serde_macros = "0.7"
-bincode = { version = "0.5", features = [ "serde" ] }
+serde = "0.8"
+serde_macros = "0.8"
+bincode = { version = "0.6", features = [ "serde" ] }
 rust-crypto = "0.2"
 rand = "0.3"
